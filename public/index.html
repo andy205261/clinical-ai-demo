@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clinical AI Summary Generator — Anh Truong Nguyen</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#080c14;--bg2:#0e1420;--ink:#f1f5f9;--ink2:#cbd5e1;--ink3:#94a3b8;--accent:#38bdf8;--green:#34d399;--purple:#a78bfa;--amber:#fbbf24;--rule:rgba(255,255,255,.07)}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+header{padding:18px 32px;border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;background:rgba(8,12,20,.9);backdrop-filter:blur(20px);position:sticky;top:0;z-index:10}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-box{width:36px;height:36px;background:var(--bg);border:1.5px solid rgba(52,211,153,.5);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.logo-name{font-family:'DM Serif Display',serif;font-size:16px}
+.logo-name span{color:var(--accent)}
+.badge{font-family:'DM Mono',monospace;font-size:10px;color:var(--green);background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.2);padding:4px 10px;border-radius:100px;letter-spacing:.06em}
+.hero{padding:40px 32px 28px;text-align:center;border-bottom:1px solid var(--rule);background:linear-gradient(180deg,rgba(56,189,248,.04) 0%,transparent 100%)}
+.hero-tag{font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:.1em;margin-bottom:12px}
+.hero h1{font-family:'DM Serif Display',serif;font-size:clamp(26px,4vw,42px);letter-spacing:-1.5px;line-height:1.05;margin-bottom:10px}
+.hero h1 em{font-style:italic;color:var(--green)}
+.hero p{font-size:14px;color:var(--ink3);max-width:480px;margin:0 auto;line-height:1.7}
+.model-pill{display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-family:'DM Mono',monospace;font-size:11px;color:var(--purple);background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2);padding:4px 12px;border-radius:100px}
+.pulse{width:6px;height:6px;border-radius:50%;background:var(--purple);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.main{display:grid;grid-template-columns:1fr 1fr;min-height:calc(100vh - 200px)}
+.input-pane{padding:24px 28px;border-right:1px solid var(--rule)}
+.output-pane{padding:24px 28px;background:var(--bg2)}
+.pane-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3);text-transform:uppercase;margin-bottom:12px}
+.aud-tabs{display:flex;gap:6px;margin-bottom:16px}
+.aud-btn{padding:7px 14px;border-radius:8px;border:1px solid var(--rule);font-size:12px;font-family:'Outfit',sans-serif;font-weight:500;cursor:pointer;transition:all .15s;background:rgba(255,255,255,.03);color:var(--ink3)}
+.aud-btn.active.pcp{background:rgba(56,189,248,.12);color:var(--accent);border-color:rgba(56,189,248,.3)}
+.aud-btn.active.nursing{background:rgba(52,211,153,.12);color:var(--green);border-color:rgba(52,211,153,.3)}
+.aud-btn.active.patient{background:rgba(167,139,250,.12);color:var(--purple);border-color:rgba(167,139,250,.3)}
+.aud-btn:hover:not(.active){background:rgba(255,255,255,.06);color:var(--ink)}
+textarea{width:100%;background:var(--bg2);border:1px solid var(--rule);border-radius:10px;padding:14px;font-size:13px;font-family:'Outfit',sans-serif;color:var(--ink);resize:none;height:240px;line-height:1.7;outline:none;transition:border-color .15s}
+textarea:focus{border-color:rgba(56,189,248,.3)}
+textarea::placeholder{color:var(--ink3)}
+.char-count{font-size:11px;color:var(--ink3);font-family:'DM Mono',monospace;margin-top:5px;text-align:right}
+.gen-btn{width:100%;margin-top:12px;padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,#0ea5e9,#38bdf8);color:#080c14;font-size:14px;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.gen-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 20px rgba(56,189,248,.3)}
+.gen-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.examples{margin-top:16px}
+.example-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink3);letter-spacing:.08em;margin-bottom:7px}
+.example-chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--rule);color:var(--ink3);cursor:pointer;transition:all .15s;background:transparent}
+.chip:hover{border-color:rgba(56,189,248,.3);color:var(--accent);background:rgba(56,189,248,.06)}
+.output-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.aud-badge{font-family:'DM Mono',monospace;font-size:10px;padding:4px 10px;border-radius:100px;letter-spacing:.06em;font-weight:600}
+.badge-pcp{background:rgba(56,189,248,.12);color:var(--accent);border:1px solid rgba(56,189,248,.2)}
+.badge-nursing{background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+.badge-patient{background:rgba(167,139,250,.12);color:var(--purple);border:1px solid rgba(167,139,250,.2)}
+.copy-btn{font-size:11px;font-family:'DM Mono',monospace;color:var(--ink3);background:transparent;border:1px solid var(--rule);padding:4px 10px;border-radius:6px;cursor:pointer;transition:all .15s}
+.copy-btn:hover{border-color:rgba(255,255,255,.2);color:var(--ink)}
+.output-box{background:var(--bg);border:1px solid var(--rule);border-radius:10px;padding:18px;min-height:300px;font-size:13px;line-height:1.8;color:var(--ink2);white-space:pre-wrap;font-family:'Outfit',sans-serif;position:relative;overflow-y:auto;max-height:400px}
+.placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;color:var(--ink3);text-align:center;gap:10px}
+.placeholder svg{opacity:.3}
+.thinking{display:flex;align-items:center;gap:8px;color:var(--ink3);font-size:13px;font-family:'DM Mono',monospace}
+.dots{display:flex;gap:4px}
+.dots span{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:bounce .8s infinite}
+.dots span:nth-child(2){animation-delay:.15s}
+.dots span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,100%{transform:translateY(0);opacity:.5}50%{transform:translateY(-4px);opacity:1}}
+.cursor{display:inline-block;width:2px;height:14px;background:var(--accent);margin-left:2px;animation:blink .7s infinite;vertical-align:middle}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.metric{background:var(--bg);border:1px solid var(--rule);border-radius:8px;padding:10px;text-align:center}
+.metric-val{font-size:18px;font-weight:700;font-family:'DM Serif Display',serif;color:var(--green)}
+.metric-lbl{font-size:10px;color:var(--ink3);font-family:'DM Mono',monospace;margin-top:2px}
+.safety{margin-top:12px;padding:10px 14px;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.15);border-radius:8px;display:flex;gap:10px;align-items:flex-start}
+.safety-text{font-size:11px;color:var(--ink3);line-height:1.6}
+.safety-text strong{color:var(--amber)}
+footer{padding:14px 32px;border-top:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--ink3)}
+footer a{color:var(--accent);text-decoration:none}
+@media(max-width:768px){.main{grid-template-columns:1fr}.input-pane{border-right:none;border-bottom:1px solid var(--rule)}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-box">
+      <svg width="24" height="24" viewBox="0 0 24 24">
+        <text x="12" y="17" font-family="'DM Serif Display',serif" font-size="16" fill="none" stroke="#38bdf8" stroke-width="0.8" text-anchor="middle">A</text>
+        <path d="M1,17 Q4,13 7,17 Q10,21 13,17 Q16,13 19,17 Q22,21 25,17" fill="none" stroke="#34d399" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div>
+      <div class="logo-name">Anh Truong <span>Nguyen</span></div>
+      <div style="font-size:10px;color:var(--ink3);font-family:'DM Mono',monospace">Clinical AI Portfolio</div>
+    </div>
+  </div>
+  <div class="badge">PROJECT 08 — LIVE AI DEMO</div>
+</header>
+
+<div class="hero">
+  <div class="hero-tag">● LIVE · POWERED BY CLAUDE AI</div>
+  <h1>Clinical Discharge<br>Summary <em>Generator</em></h1>
+  <p>Paste any physician dictation. Choose your audience. Get a structured clinical summary in seconds.</p>
+  <div class="model-pill"><span class="pulse"></span>claude-haiku-4-5 · Real-time generation</div>
+</div>
+
+<div class="main">
+  <div class="input-pane">
+    <div class="pane-label">Target Audience</div>
+    <div class="aud-tabs">
+      <button class="aud-btn active pcp" onclick="setAud('pcp',this)">🩺 PCP Handoff</button>
+      <button class="aud-btn nursing" onclick="setAud('nursing',this)">💊 Nursing SBAR</button>
+      <button class="aud-btn patient" onclick="setAud('patient',this)">👤 Patient Portal</button>
+    </div>
+    <div class="pane-label">Physician Dictation</div>
+    <textarea id="dictation" placeholder="Paste any physician dictation or clinical note here..." oninput="updateCount()">Patient is a 68-year-old male admitted for acute exacerbation of COPD. Presented with 3-day worsening dyspnea, productive cough. SpO2 88% on RA on admission. Treated with IV methylprednisolone, scheduled nebulizers, azithromycin. Improved to SpO2 97% RA by Day 3. FEV1 58% predicted on spirometry. Allergy: Penicillin (rash). Discharge medications: Prednisone 40mg x5 days, azithromycin 250mg x3 days, tiotropium 18mcg daily, albuterol PRN. Follow-up PCP 5-7 days, Pulmonology referral placed.</textarea>
+    <div class="char-count" id="charCount">0 characters</div>
+    <button class="gen-btn" id="genBtn" onclick="generate()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      Generate Summary
+    </button>
+    <div class="examples">
+      <div class="example-label">Quick examples</div>
+      <div class="example-chips">
+        <div class="chip" onclick="loadEx('ami')">Acute MI</div>
+        <div class="chip" onclick="loadEx('sepsis')">Sepsis</div>
+        <div class="chip" onclick="loadEx('stroke')">Stroke</div>
+        <div class="chip" onclick="loadEx('chf')">CHF</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="output-pane">
+    <div class="output-header">
+      <div class="aud-badge badge-pcp" id="audBadge">PCP HANDOFF</div>
+      <button class="copy-btn" onclick="copyOut()" id="copyBtn" style="display:none">Copy</button>
+    </div>
+    <div class="output-box" id="outputBox">
+      <div class="placeholder" id="placeholder">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        <div style="font-size:13px">Select audience → Generate</div>
+        <div style="font-size:11px;color:var(--ink3);font-family:'DM Mono',monospace">Real AI · Any dictation works</div>
+      </div>
+      <div id="thinkingEl" style="display:none" class="placeholder">
+        <div class="thinking"><div class="dots"><span></span><span></span><span></span></div><span id="thinkText">Analyzing notes...</span></div>
+      </div>
+      <div id="outText" style="display:none"></div>
+    </div>
+    <div class="metrics" id="metrics" style="display:none">
+      <div class="metric"><div class="metric-val" id="m1">—</div><div class="metric-lbl">Words</div></div>
+      <div class="metric"><div class="metric-val" id="m2" style="color:var(--accent)">—</div><div class="metric-lbl">Time</div></div>
+      <div class="metric"><div class="metric-val" id="m3" style="color:var(--purple)">—</div><div class="metric-lbl">Audience</div></div>
+    </div>
+    <div class="safety" id="safetyNote" style="display:none">
+      <span style="color:var(--amber);flex-shrink:0">⚠</span>
+      <div class="safety-text"><strong>Clinical Safety:</strong> AI summaries require licensed clinician review before clinical use. Demo only.</div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div>Built by <a href="https://andy205261.github.io" target="_blank">Anh Truong Nguyen</a> · Powered by Claude (Anthropic)</div>
+  <a href="https://andy205261.github.io">← Portfolio</a>
+</footer>
+
+<script>
+let aud = 'pcp', generating = false;
+
+const EX = {
+  ami:`58-year-old male, sudden onset substernal chest pain 2 hours ago, radiating to left arm, diaphoretic. ECG: inferior ST elevation. Troponin 2.8. Emergent PCI to RCA with DES. Post-procedure EF 45%. Started aspirin 81mg, ticagrelor 90mg BID, metoprolol 25mg, rosuvastatin 40mg, lisinopril 2.5mg. Allergy: Sulfa. Discharge Day 3. Cardiology follow-up 1 week, cardiac rehab referral.`,
+  sepsis:`72-year-old female from SNF, fever 39.2, HR 118, BP 88/54, altered. WBC 22k, lactate 3.8. UA positive. E. coli urosepsis with septic shock. Treated with fluids, norepinephrine (weaned Day 2), pip-tazo x7 days. ICU 3 days, step-down 2 days. Discharge to SNF. Continue TMP-SMX x5 days. Foley removed. PMH: DM, HTN.`,
+  stroke:`64-year-old female, sudden left-sided weakness, NIHSS 12. CT: no hemorrhage, MCA occlusion. IV tPA given, successful thrombectomy TICI 2b. MRI: small right MCA infarct. Discharge Day 5, residual mild left arm weakness. Aspirin 325mg, atorvastatin 80mg. Holter ordered, TTE negative. Transfer to acute inpatient rehab.`,
+  chf:`55-year-old male, HFrEF EF 30%, 1-week worsening dyspnea, 8kg weight gain. BNP 2840, bilateral crackles, 3+ edema. IV furosemide, 5kg fluid removal, euvolemic Day 4. Carvedilol uptitrated, lisinopril increased, spironolactone added. Discharge: daily weights, 1.5L fluid restriction, low-sodium diet. HF clinic follow-up 1 week.`
+};
+
+const PROMPTS = {
+  pcp:`You are a hospitalist writing a discharge summary for the patient's PCP. Be medically precise.
+
+Format EXACTLY:
+DISCHARGE SUMMARY — PCP HANDOFF
+
+PRINCIPAL DIAGNOSIS
+[ICD-10 code + diagnosis + severity]
+
+HOSPITAL COURSE
+[2-3 sentences: key events, treatment, response]
+
+DISCHARGE MEDICATIONS — CHANGES
+[List new/changed/stopped meds with doses. Mark NEW / CHANGED / STOPPED]
+
+CRITICAL FOLLOW-UP
+[Bulleted time-sensitive items]
+
+ALLERGIES
+[Allergies with reaction type]`,
+
+  nursing:`You are a charge nurse writing SBAR shift handoff. Be action-oriented.
+
+Format EXACTLY:
+NURSING SHIFT HANDOFF — SBAR
+
+SITUATION
+[Patient, diagnosis, current status in 1-2 sentences]
+
+BACKGROUND
+[PMH, admission reason, key events]
+
+ASSESSMENT
+[Vitals status, active concerns, safety flags, IV access, O2]
+
+RECOMMENDATIONS
+[Use → arrows for each nursing task, monitoring params, patient education]
+
+DISCHARGE PLANNING
+[Status, pending criteria, family education]`,
+
+  patient:`You are a patient educator. Write at 6th grade reading level. Be warm and clear.
+
+Format EXACTLY:
+YOUR HEALTH SUMMARY
+
+WHY YOU WERE IN THE HOSPITAL
+[2-3 plain-language sentences explaining what happened and what we did]
+
+YOUR MEDICINES
+[Each medicine: name, what it does simply, how to take it]
+
+YOUR NEXT STEPS
+[Numbered list of what to do at home]
+
+WARNING SIGNS — CALL 911 IF:
+[3-5 specific emergency symptoms]
+
+CALL YOUR DOCTOR IF:
+[3-4 symptoms needing prompt attention]`
+};
+
+function setAud(a, btn) {
+  aud = a;
+  document.querySelectorAll('.aud-btn').forEach(b => b.classList.remove('active','pcp','nursing','patient'));
+  btn.classList.add('active', a);
+  const badge = document.getElementById('audBadge');
+  badge.className = 'aud-badge badge-' + a;
+  badge.textContent = a === 'pcp' ? 'PCP HANDOFF' : a === 'nursing' ? 'NURSING SBAR' : 'PATIENT SUMMARY';
+}
+
+function loadEx(t) { document.getElementById('dictation').value = EX[t]; updateCount(); }
+function updateCount() { document.getElementById('charCount').textContent = document.getElementById('dictation').value.length + ' characters'; }
+
+function copyOut() {
+  navigator.clipboard.writeText(document.getElementById('outText').innerText).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+  });
+}
+
+async function generate() {
+  if (generating) return;
+  const dictation = document.getElementById('dictation').value.trim();
+  if (!dictation) { alert('Please enter a clinical dictation.'); return; }
+
+  generating = true;
+  document.getElementById('genBtn').disabled = true;
+  const t0 = Date.now();
+
+  document.getElementById('placeholder').style.display = 'none';
+  document.getElementById('thinkingEl').style.display = 'flex';
+  document.getElementById('outText').style.display = 'none';
+
+  const msgs = ['Analyzing clinical notes...', 'Identifying critical information...', 'Structuring for ' + (aud==='pcp'?'PCP':'aud'==='nursing'?'nursing staff':'patient') + '...', 'Generating summary...'];
+  let mi = 0;
+  const mi_int = setInterval(() => { mi = Math.min(mi+1, msgs.length-1); document.getElementById('thinkText').textContent = msgs[mi]; }, 800);
+
+  try {
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ system: PROMPTS[aud], userMessage: `Generate a clinical summary from this dictation:\n\n${dictation}` })
+    });
+    clearInterval(mi_int);
+    const data = await res.json();
+    const text = data.content?.[0]?.text || 'Error generating summary.';
+    showOutput(text, ((Date.now()-t0)/1000).toFixed(1)+'s');
+  } catch(err) {
+    clearInterval(mi_int);
+    showOutput('Error: ' + err.message, '—');
+  }
+}
+
+function showOutput(text, time) {
+  document.getElementById('thinkingEl').style.display = 'none';
+  const el = document.getElementById('outText');
+  el.style.display = 'block';
+  el.textContent = '';
+  document.getElementById('copyBtn').style.display = 'inline-block';
+  document.getElementById('metrics').style.display = 'grid';
+  document.getElementById('safetyNote').style.display = 'flex';
+
+  const cursor = document.createElement('span');
+  cursor.className = 'cursor';
+  el.appendChild(cursor);
+
+  let i = 0;
+  const speed = Math.max(6, Math.min(18, 3500/text.length));
+  const iv = setInterval(() => {
+    if (i < text.length) { el.insertBefore(document.createTextNode(text[i]), cursor); i++; el.parentElement.scrollTop = el.parentElement.scrollHeight; }
+    else {
+      clearInterval(iv); cursor.remove();
+      document.getElementById('m1').textContent = text.split(/\s+/).length;
+      document.getElementById('m2').textContent = time;
+      document.getElementById('m3').textContent = aud==='pcp'?'PCP':aud==='nursing'?'RN':'Pt';
+      generating = false;
+      document.getElementById('genBtn').disabled = false;
+    }
+  }, speed);
+}
+
+updateCount();
+</script>
+</body>
+</html>
